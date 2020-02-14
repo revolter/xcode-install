@@ -72,7 +72,7 @@ module XcodeInstall
       ].map(&:to_s)
 
       command_string = command.collect(&:shellescape).join(' ')
-      command_string += " 2> #{progress_log_file}" # to not run shellescape on the `2>`
+      command_string += " 2> \"#{progress_log_file}\"" # to not run shellescape on the `2>`
 
       # Run the curl command in a loop, retry when curl exit status is 18
       # "Partial file. Only a part of the file was transferred."
@@ -218,7 +218,7 @@ module XcodeInstall
       xcode_path = "/Applications/Xcode#{suffix}.app"
 
       if dmg_path.extname == '.xip'
-        `xip -x #{dmg_path}`
+        `xip -x "#{dmg_path}"`
         xcode_orig_path = File.join(Dir.pwd, 'Xcode.app')
         xcode_beta_path = File.join(Dir.pwd, 'Xcode-beta.app')
         if Pathname.new(xcode_orig_path).exist?
@@ -256,7 +256,7 @@ HELP
       xcode = InstalledXcode.new(xcode_path)
 
       unless xcode.verify_integrity
-        `sudo rm -rf #{xcode_path}`
+        `sudo rm -rf "#{xcode_path}"`
         return
       end
 
@@ -265,10 +265,10 @@ HELP
       xcode.install_components
 
       if switch
-        `sudo rm -f #{SYMLINK_PATH}` unless current_symlink.nil?
-        `sudo ln -sf #{xcode_path} #{SYMLINK_PATH}` unless SYMLINK_PATH.exist?
+        `sudo rm -f "#{SYMLINK_PATH}"` unless current_symlink.nil?
+        `sudo ln -sf "#{xcode_path}" "#{SYMLINK_PATH}"` unless SYMLINK_PATH.exist?
 
-        `sudo xcode-select --switch #{xcode_path}`
+        `sudo xcode-select --switch "#{xcode_path}"`
         puts `xcodebuild -version`
       end
 
@@ -292,7 +292,7 @@ HELP
     def open_release_notes_url(version)
       return if version.nil?
       xcode = seedlist.find { |x| x.name == version }
-      `open #{xcode.release_notes_url}` unless xcode.nil? || xcode.release_notes_url.nil?
+      `open "#{xcode.release_notes_url}"` unless xcode.nil? || xcode.release_notes_url.nil?
     end
 
     def list_annotated(xcodes_list)
@@ -315,8 +315,8 @@ HELP
 
     def symlink(version)
       xcode = installed_versions.find { |x| x.version == version }
-      `sudo rm -f #{SYMLINK_PATH}` unless current_symlink.nil?
-      `sudo ln -sf #{xcode.path} #{SYMLINK_PATH}` unless xcode.nil? || SYMLINK_PATH.exist?
+      `sudo rm -f "#{SYMLINK_PATH}"` unless current_symlink.nil?
+      `sudo ln -sf "#{xcode.path}" "#{SYMLINK_PATH}"` unless xcode.nil? || SYMLINK_PATH.exist?
     end
 
     def symlinks_to
@@ -459,7 +459,7 @@ HELP
       io.close
       unless $?.exitstatus.zero?
         file_path = args[-1]
-        if `file -b #{file_path}`.start_with?('HTML')
+        if `file -b "#{file_path}"`.start_with?('HTML')
           fail Informative, "Failed to mount #{file_path}, logging into your account from a browser should tell you what is going wrong."
         end
         fail Informative, 'Failed to invoke hdiutil.'
@@ -521,7 +521,7 @@ HELP
       return unless should_install
       prepare_package unless pkg_path.exist?
       puts "Please authenticate to install #{name}..."
-      `sudo installer -pkg #{pkg_path} -target /`
+      `sudo installer -pkg "#{pkg_path}" -target /`
       fail Informative, "Could not install #{name}, please try again" unless installed?
       source_receipts_dir = '/private/var/db/receipts'
       target_receipts_dir = "#{@install_prefix}/System/Library/Receipts"
@@ -539,10 +539,10 @@ HELP
       puts 'Expanding pkg'
       expanded_pkg_path = CACHE_DIR + identifier
       FileUtils.rm_rf(expanded_pkg_path)
-      `pkgutil --expand #{mount_location}/*.pkg #{expanded_pkg_path}`
+      `pkgutil --expand "#{mount_location}/*.pkg" "#{expanded_pkg_path}"`
       puts "Expanded pkg into #{expanded_pkg_path}"
       puts 'Unmounting DMG'
-      `umount #{mount_location}`
+      `umount "#{mount_location}"`
       puts 'Setting package installation location'
       package_info_path = expanded_pkg_path + 'PackageInfo'
       package_info_contents = File.read(package_info_path)
@@ -550,7 +550,7 @@ HELP
         f << package_info_contents.sub('pkg-info', %(pkg-info install-location="#{@install_prefix}"))
       end
       puts 'Rebuilding package'
-      `pkgutil --flatten #{expanded_pkg_path} #{pkg_path}`
+      `pkgutil --flatten "#{expanded_pkg_path}" "#{pkg_path}"`
       FileUtils.rm_rf(expanded_pkg_path)
     end
 
@@ -614,24 +614,24 @@ HELP
     def approve_license
       if Gem::Version.new(version) < Gem::Version.new('7.3')
         license_info_path = File.join(@path, 'Contents/Resources/LicenseInfo.plist')
-        license_id = `/usr/libexec/PlistBuddy -c 'Print :licenseID' #{license_info_path}`
-        license_type = `/usr/libexec/PlistBuddy -c 'Print :licenseType' #{license_info_path}`
+        license_id = `/usr/libexec/PlistBuddy -c 'Print :licenseID' "#{license_info_path}"`
+        license_type = `/usr/libexec/PlistBuddy -c 'Print :licenseType' "#{license_info_path}"`
         license_plist_path = '/Library/Preferences/com.apple.dt.Xcode.plist'
-        `sudo rm -rf #{license_plist_path}`
+        `sudo rm -rf "#{license_plist_path}"`
         if license_type == 'GM'
-          `sudo /usr/libexec/PlistBuddy -c "add :IDELastGMLicenseAgreedTo string #{license_id}" #{license_plist_path}`
-          `sudo /usr/libexec/PlistBuddy -c "add :IDEXcodeVersionForAgreedToGMLicense string #{version}" #{license_plist_path}`
+          `sudo /usr/libexec/PlistBuddy -c "add :IDELastGMLicenseAgreedTo string #{license_id}" "#{license_plist_path}"`
+          `sudo /usr/libexec/PlistBuddy -c "add :IDEXcodeVersionForAgreedToGMLicense string #{version}" "#{license_plist_path}"`
         else
-          `sudo /usr/libexec/PlistBuddy -c "add :IDELastBetaLicenseAgreedTo string #{license_id}" #{license_plist_path}`
-          `sudo /usr/libexec/PlistBuddy -c "add :IDEXcodeVersionForAgreedToBetaLicense string #{version}" #{license_plist_path}`
+          `sudo /usr/libexec/PlistBuddy -c "add :IDELastBetaLicenseAgreedTo string #{license_id}" "#{license_plist_path}"`
+          `sudo /usr/libexec/PlistBuddy -c "add :IDEXcodeVersionForAgreedToBetaLicense string #{version}" "#{license_plist_path}"`
         end
       else
-        `sudo #{@path}/Contents/Developer/usr/bin/xcodebuild -license accept`
+        `sudo "#{@path}/Contents/Developer/usr/bin/xcodebuild" -license accept`
       end
     end
 
     def available_simulators
-      @available_simulators ||= JSON.parse(`curl -Ls #{downloadable_index_url} | plutil -convert json -o - -`)['downloadables'].map do |downloadable|
+      @available_simulators ||= JSON.parse(`curl -Ls "#{downloadable_index_url}" | plutil -convert json -o - -`)['downloadables'].map do |downloadable|
         Simulator.new(downloadable)
       end
     rescue JSON::ParserError
@@ -642,16 +642,16 @@ HELP
       # starting with Xcode 9, we have `xcodebuild -runFirstLaunch` available to do package
       # postinstalls using a documented option
       if Gem::Version.new(version) >= Gem::Version.new('9')
-        `sudo #{@path}/Contents/Developer/usr/bin/xcodebuild -runFirstLaunch`
+        `sudo "#{@path}/Contents/Developer/usr/bin/xcodebuild" -runFirstLaunch`
       else
         Dir.glob("#{@path}/Contents/Resources/Packages/*.pkg").each do |pkg|
-          `sudo installer -pkg #{pkg} -target /`
+          `sudo installer -pkg "#{pkg}" -target /`
         end
       end
       osx_build_version = `sw_vers -buildVersion`.chomp
       tools_version = `/usr/libexec/PlistBuddy -c "Print :ProductBuildVersion" "#{@path}/Contents/version.plist"`.chomp
       cache_dir = `getconf DARWIN_USER_CACHE_DIR`.chomp
-      `touch #{cache_dir}com.apple.dt.Xcode.InstallCheckCache_#{osx_build_version}_#{tools_version}`
+      `touch "#{cache_dir}com.apple.dt.Xcode.InstallCheckCache_#{osx_build_version}_#{tools_version}"`
     end
 
     # This method might take a few ms, this could be improved by implementing https://github.com/KrauseFx/xcode-install/issues/273
@@ -681,7 +681,7 @@ HELP
     end
 
     def verify_app_security_assessment
-      puts `/usr/bin/codesign --verify --verbose #{@path}`
+      puts `/usr/bin/codesign --verify --verbose "#{@path}"`
       $?.exitstatus.zero?
     end
 
